@@ -1,0 +1,1 @@
+sbcl --load spacex.lisp
