@@ -13,7 +13,7 @@
 (defparameter roll-left-button nil)
 (defparameter roll-right-button nil)
 
-;transation controls
+; transation controls
 (defparameter translate-left-button nil)
 (defparameter translate-right-button nil)
 (defparameter translate-up-button nil)
@@ -21,11 +21,27 @@
 (defparameter translate-forward-button nil)
 (defparameter translate-backward-button nil)
 
+; readings
+(defparameter reading-roll nil)
+(defparameter reading-roll-rate nil)
+(defparameter reading-pitch nil)
+(defparameter reading-pitch-rate nil)
+(defparameter reading-yaw nil)
+(defparameter reading-yaw-rate nil)
+
+(defparameter reading-translate-x nil)
+(defparameter reading-translate-y nil)
+(defparameter reading-translate-z nil)
+(defparameter reading-translate-rate nil)
+(defparameter reading-translate-range nil)
+
+
 
 ; *** Utils ***
 (defvar f "spacex.lisp")
 (defvar spacex-sim-url "https://iss-sim.spacex.com/")
 (defun l (name) (load name))
+
 (defun string-replace (string part replacement &key (test #'char=))
   "Returns a new string in which all the occurences of the part 
   is replaced with replacement."
@@ -52,7 +68,7 @@
 ; *** Payload Template ***
 (defvar payload-init-session "{\"capabilities\":{\"firstMatch\":[{}],\"alwaysMatch\":{\"browserName\":\"chrome\",\"platformName\":\"any\",\"goog:chromeOptions\":{\"extensions\":[],\"args\":[]}}}}")
 (defvar payload-goto "{\"url\":\"URL\"}")
-(defvar payload-find-elem-by-id "{\"using\":\"css selector\",\"value\":\"[id=\\\"ID\\\"]\"}")
+(defvar payload-find-elem-by-selector "{\"using\":\"css selector\",\"value\":\"SELECTOR\"}")
 (defvar payload-click "{\"id\":\"ID\"}")
 
 ; *** Classes *** 
@@ -80,13 +96,13 @@
     (format-url (url obj) "session" (session-id obj) "url")
     :content (string-replace payload-goto "URL" dest)))
 
-(defmethod find-elem-by-id ((obj Driver) &key id)
-  "Select and Create an elem by id"
+(defmethod find-elem-by-selector ((obj Driver) &key selector)
+  "Select and Create an elem by css selector"
   (let ((resp (dex:post
               (format-url (url obj) "session" (session-id obj) "element")
-              :content (string-replace payload-find-elem-by-id "ID" id))))
+              :content (string-replace payload-find-elem-by-selector "SELECTOR" selector))))
     (make-instance 'Elem 
-                   :id id
+                   :selector selector
                    :session-url (format-url (url driver) "session" (session-id driver))
                    :dom-id (cdr (car (cdr (car (string-to-cl resp)))))
                    )))
@@ -107,9 +123,9 @@
   ((session-url
      :initarg :session-url
      :reader session-url)
-  (id
-     :initarg :id
-     :reader id)
+  (selector
+     :initarg :selector
+     :reader selector)
    (dom-id
      :initarg :dom-id
      :reader dom-id))
@@ -120,9 +136,16 @@
     (format-url (session-url obj) "element" (dom-id obj) "click")
     :content (string-replace payload-click "ID" (dom-id obj))))
 ;
+(defmethod text ((obj Elem))
+  (let ((resp 
+          (dex:get
+            (format-url (session-url obj) "element" (dom-id obj) "text"))))
+    (cdr (car (string-to-cl resp)))))
+
+
 (defmethod print-object ((obj Elem) stream)
   (print-unreadable-object (obj stream :type t)
-    (format stream "~a Id:~a" (id obj) (dom-id obj))))
+    (format stream "~a Id:~a" (selector obj) (dom-id obj))))
 
 (defun make-driver (&key (host "http://127.0.0.1") (port "9515"))
   (let ((url (concatenate 'string host ":" port)))
@@ -137,7 +160,7 @@
       (init-session d)
       (goto d :dest spacex-sim-url)
       (handler-bind ((dex:http-request-failed #'dex:retry-request))
-        (click (find-elem-by-id driver :id "begin-button")))
+        (click (find-elem-by-selector driver :selector "#begin-button")))
       d)))
 
 
@@ -147,25 +170,36 @@
 (defun init-controllers (driver) 
   (let (
         ; rotation controls
-        (yaw-left-btn (find-elem-by-id driver :id "yaw-left-button"))
-        (yaw-right-btn (find-elem-by-id driver :id "yaw-right-button"))
-        (pitch-up-btn (find-elem-by-id driver :id "pitch-up-button"))
-        (pitch-down-btn (find-elem-by-id driver :id "pitch-down-button"))
-        (roll-left-btn (find-elem-by-id driver :id "roll-left-button"))
-        (roll-right-btn (find-elem-by-id driver :id "roll-right-button"))
+        (yaw-left-btn (find-elem-by-selector driver :selector "#yaw-left-button"))
+        (yaw-right-btn (find-elem-by-selector driver :selector "#yaw-right-button"))
+        (pitch-up-btn (find-elem-by-selector driver :selector "#pitch-up-button"))
+        (pitch-down-btn (find-elem-by-selector driver :selector "#pitch-down-button"))
+        (roll-left-btn (find-elem-by-selector driver :selector "#roll-left-button"))
+        (roll-right-btn (find-elem-by-selector driver :selector "#roll-right-button"))
 
         ; transation controls
-        (translate-left-btn (find-elem-by-id driver :id "translate-left-button"))
-        (translate-right-btn (find-elem-by-id driver :id "translate-right-button"))
-        (translate-up-btn (find-elem-by-id driver :id "translate-up-button"))
-        (translate-down-btn (find-elem-by-id driver :id "translate-down-button"))
-        (translate-forward-btn (find-elem-by-id driver :id "translate-forward-button"))
-        (translate-backward-btn (find-elem-by-id driver :id "translate-backward-button"))
+        (translate-left-btn (find-elem-by-selector driver :selector "#translate-left-button"))
+        (translate-right-btn (find-elem-by-selector driver :selector "#translate-right-button"))
+        (translate-up-btn (find-elem-by-selector driver :selector "#translate-up-button"))
+        (translate-down-btn (find-elem-by-selector driver :selector "#translate-down-button"))
+        (translate-forward-btn (find-elem-by-selector driver :selector "#translate-forward-button"))
+        (translate-backward-btn (find-elem-by-selector driver :selector "#translate-backward-button"))
+
+        ; readings
+        (reading-roll-div (find-elem-by-selector driver :selector "#roll > div.error"))
+        (reading-roll-rate-div (find-elem-by-selector driver :selector "#roll > div.rate"))
+        (reading-pitch-div (find-elem-by-selector driver :selector "#pitch > div.error"))
+        (reading-pitch-rate-div (find-elem-by-selector driver :selector "#pitch> div.rate"))
+        (reading-yaw-div (find-elem-by-selector driver :selector "#yaw > div.error"))
+        (reading-yaw-rate-div (find-elem-by-selector driver :selector "#yaw > div.rate"))
+
+        (reading-translate-x-div (find-elem-by-selector driver :selector "#x-range > div.distance"))
+        (reading-translate-y-div (find-elem-by-selector driver :selector "#y-range > div.distance"))
+        (reading-translate-z-div (find-elem-by-selector driver :selector "#z-range > div.distance"))
+        (reading-translate-rate-div (find-elem-by-selector driver :selector "#rate > div.rate"))
+        (reading-translate-range-div (find-elem-by-selector driver :selector "#range > div.rate"))
         )
     (progn
-      (princ "Yawn left")
-      (princ driver)
-      (princ yaw-left-button)
       (setq yaw-left-button yaw-left-btn)
       (setq yaw-right-button yaw-right-btn)
       (setq pitch-up-button pitch-up-btn)
@@ -179,6 +213,20 @@
       (setq translate-down-button translate-down-btn)
       (setq translate-forward-button translate-forward-btn)
       (setq translate-backward-button translate-backward-btn)
+
+      (setq reading-roll reading-roll-div)
+      (setq reading-roll-rate reading-roll-rate-div)
+      (setq reading-pitch reading-pitch-div)
+      (setq reading-pitch-rate reading-pitch-rate-div)
+      (setq reading-yaw reading-yaw-div)
+      (setq reading-yaw-rate reading-yaw-rate-div)
+
+      (setq reading-translate-x reading-translate-x-div)
+      (setq reading-translate-y reading-translate-y-div)
+      (setq reading-translate-z reading-translate-z-div)
+      (setq reading-translate-rate reading-translate-rate-div)
+      (setq reading-translate-range reading-translate-range-div)
+
       )))
 
 (defun main ()
