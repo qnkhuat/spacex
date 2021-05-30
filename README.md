@@ -1,4 +1,4 @@
-# Auto docking Dragon Simulation
+# Auto docking SpaceX Dragon2 on Simulation
 Why spend 2 minutes to try to dock the ship when you can spend 1 day to program it dock automatically in 3m12s?
 
 [Simulation Link](https://iss-sim.spacex.com/)
