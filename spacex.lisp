@@ -95,6 +95,41 @@
       (funcall func)
       (call-n-times func (- n 1)))))
 
+(defun print-status()
+  (let
+    (
+     (roll (text-to-value (text reading-roll)))
+     (roll-rate (text-to-value (text reading-roll-rate)))
+     (pitch (text-to-value (text reading-pitch)))
+     (pitch-rate (text-to-value (text reading-pitch-rate)))
+     (yaw (text-to-value (text reading-yaw)))
+     (yaw-rate (text-to-value (text reading-yaw-rate)))
+     (x (text-to-value (text reading-translate-x)))
+     (y (text-to-value (text reading-translate-y)))
+     (z (text-to-value (text reading-translate-z)))
+     (rate (text-to-value (text reading-translate-rate)))
+     (dt (- (/ (get-internal-real-time) internal-time-units-per-second) last-time))
+     )
+    (progn
+      (princ "------------------------")
+      (terpri)
+      (format t "Time: ~s" (current-date-string))
+      (terpri)
+      (format t "Roll: ~f, rate: ~f" roll roll-rate)
+      (terpri)
+      (format t "Pitch ~f, rate: ~f" pitch pitch-rate)
+      (terpri)
+      (format t "Yaw ~f, rate: ~f" yaw yaw-rate)
+      (terpri)
+      (format t "x: ~f, rate: ~f" x (/ (- x lastx) dt))
+      (terpri)
+      (format t "y: ~f, rate: ~f" y (/ (- y lasty) dt))
+      (terpri)
+      (format t "z: ~f, rate: ~f" z (/ (- z lastz) dt))
+      (terpri)
+      (format t "rate: ~f" rate)
+      (terpri)
+      )))
 
 ; *** Payload Template ***
 (defvar payload-init-session "{\"capabilities\":{\"firstMatch\":[{}],\"alwaysMatch\":{\"browserName\":\"chrome\",\"platformName\":\"any\",\"goog:chromeOptions\":{\"extensions\":[],\"args\":[]}}}}")
@@ -286,44 +321,6 @@
       )))
 
 
-(defun print-status()
-  (let
-    (
-     (roll (text-to-value (text reading-roll)))
-     (roll-rate (text-to-value (text reading-roll-rate)))
-     (pitch (text-to-value (text reading-pitch)))
-     (pitch-rate (text-to-value (text reading-pitch-rate)))
-     (yaw (text-to-value (text reading-yaw)))
-     (yaw-rate (text-to-value (text reading-yaw-rate)))
-     (x (text-to-value (text reading-translate-x)))
-     (y (text-to-value (text reading-translate-y)))
-     (z (text-to-value (text reading-translate-z)))
-     (rate (text-to-value (text reading-translate-rate)))
-     (dt (- (/ (get-internal-real-time) internal-time-units-per-second) last-time))
-     )
-    (progn
-      (princ "------------------------")
-      (terpri)
-      (format t "Time: ~s" (current-date-string))
-      (terpri)
-      (format t "Roll: ~f, rate: ~f" roll roll-rate)
-      (terpri)
-      (format t "Pitch ~f, rate: ~f" pitch pitch-rate)
-      (terpri)
-      (format t "Yaw ~f, rate: ~f" yaw yaw-rate)
-      (terpri)
-      (format t "x: ~f, rate: ~f" x (/ (- x lastx) dt))
-      (terpri)
-      (format t "y: ~f, rate: ~f" y (/ (- y lasty) dt))
-      (terpri)
-      (format t "z: ~f, rate: ~f" z (/ (- z lastz) dt))
-      (terpri)
-      (format t "rate: ~f" rate)
-      (terpri)
-      )
-    ))
-
-
 (defun autopilot
   (
    yaw-left-button 
@@ -349,7 +346,6 @@
    reading-translate-x-div
    reading-translate-y-div
    reading-translate-z-div
-   reading-translate-rate-div
    )
 
   (let (
@@ -362,7 +358,6 @@
         (x (text-to-value (text reading-translate-x-div)))
         (y (text-to-value (text reading-translate-y-div)))
         (z (text-to-value (text reading-translate-z-div)))
-        ;(rate (text-to-value (text reading-translate-rate-div)))
         (dt (- (/ (get-internal-real-time) internal-time-units-per-second) last-time))
         )
     (progn
@@ -379,8 +374,9 @@
       (setq lasty y)
       (setq lastz z)
       (setq last-time (/ (get-internal-real-time) internal-time-units-per-second))
-      (sleep .4)
 
+      ; Infinte loop
+      (sleep .4)
       (autopilot
         yaw-left-button 
         yaw-right-button 
@@ -406,52 +402,68 @@
         reading-translate-x
         reading-translate-y
         reading-translate-z
-        reading-translate-rate
-        )
-      )))
+        ))))
 
 (defun ap ()
+  "short call to run autopilot"
   (autopilot
+      yaw-left-button 
+      yaw-right-button 
+      pitch-up-button 
+      pitch-down-button 
+      roll-left-button 
+      roll-right-button 
 
-    yaw-left-button 
-    yaw-right-button 
-    pitch-up-button 
-    pitch-down-button 
-    roll-left-button 
-    roll-right-button 
+      translate-left-button 
+      translate-right-button 
+      translate-up-button 
+      translate-down-button 
+      translate-forward-button 
+      translate-backward-button 
 
-    translate-left-button 
-    translate-right-button 
-    translate-up-button 
-    translate-down-button 
-    translate-forward-button 
-    translate-backward-button 
+      reading-roll
+      reading-roll-rate
+      reading-pitch
+      reading-pitch-rate
+      reading-yaw
+      reading-yaw-rate
 
-    reading-roll
-    reading-roll-rate
-    reading-pitch
-    reading-pitch-rate
-    reading-yaw
-    reading-yaw-rate
-
-    reading-translate-x
-    reading-translate-y
-    reading-translate-z
-    reading-translate-rate
-    )
-  )
+      reading-translate-x
+      reading-translate-y
+      reading-translate-z
+    ))
 
 (defun main ()
   (let ((sim (init-sim)))
     (sleep 10) ; Wait for begin annimation
     (init-controllers sim)
-    (ap)
-    ))
+    (autopilot
+      yaw-left-button 
+      yaw-right-button 
+      pitch-up-button 
+      pitch-down-button 
+      roll-left-button 
+      roll-right-button 
+
+      translate-left-button 
+      translate-right-button 
+      translate-up-button 
+      translate-down-button 
+      translate-forward-button 
+      translate-backward-button 
+
+      reading-roll
+      reading-roll-rate
+      reading-pitch
+      reading-pitch-rate
+      reading-yaw
+      reading-yaw-rate
+
+      reading-translate-x
+      reading-translate-y
+      reading-translate-z
+    )))
+
 (main)
-
-
-
-
-
 
 
