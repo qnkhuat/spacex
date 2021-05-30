@@ -190,23 +190,20 @@
         (t target)))
 
 (defun auto-rotate (&key value rate max-rate dec-btn inc-btn jump)
-  (let ((target-rate (bound-target (/ value 2) max-rate)))
+  (let ((target-rate (bound-target (/ value 3) max-rate)))
     (if (> rate target-rate)
       (call-n-times (lambda() (click dec-btn)) (round (* (- rate target-rate) (/ 1 jump))))
       (call-n-times (lambda() (click inc-btn)) (round (* (- target-rate rate) (/ 1 jump))))
       )))
 
 (defun auto-translate (&key value rate max-rate dec-btn inc-btn)
-  (let ((target-rate (bound-target (/ value 2) max-rate)))
-    (progn
-      (format t "Rate: ~f, Target-rate: ~f, Value:: ~f" rate target-rate value)
-      (terpri)
+  (let ((target-rate (bound-target value max-rate)))
       (if (> value 0)
         (cond ((> rate (- target-rate)) (click dec-btn))
               ((< rate (- target-rate)) (click inc-btn)))
         (cond ((<= rate target-rate) (click inc-btn))
               ((< rate target-rate) (click dec-btn)))
-        ))))
+        )))
 
 ; *** Main ***
 (defun init-sim() 
@@ -371,10 +368,9 @@
       (auto-rotate :value pitch :rate pitch-rate :max-rate .4 :dec-btn pitch-up-button :inc-btn pitch-down-button :jump .1)
       (auto-rotate :value yaw :rate yaw-rate :max-rate .4 :dec-btn yaw-left-button :inc-btn yaw-right-button :jump .1)
   
-      (auto-translate :value x :rate (/ (- x lastx) dt) :max-rate (if (< x 50) .2 2) :dec-btn translate-forward-button :inc-btn translate-backward-button)
-      (auto-translate :value y :rate (/ (- y lasty) dt) :max-rate (if (< y 10) .05 2) :dec-btn translate-left-button :inc-btn translate-right-button)
-      (auto-translate :value z :rate (/ (- z lastz) dt) :max-rate (if (< z 10) .05 2) :dec-btn translate-down-button :inc-btn translate-up-button)
-
+      (auto-translate :value x :rate (/ (- x lastx) dt) :max-rate (/ x 20) :dec-btn translate-forward-button :inc-btn translate-backward-button)
+      (auto-translate :value y :rate (/ (- y lasty) dt) :max-rate (/ y 10) :dec-btn translate-left-button :inc-btn translate-right-button)
+      (auto-translate :value z :rate (/ (- z lastz) dt) :max-rate (/ z 10) :dec-btn translate-down-button :inc-btn translate-up-button)
 
       (setq lastx x)
       (setq lasty y)
