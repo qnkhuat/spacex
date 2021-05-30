@@ -178,53 +178,19 @@
     (make-instance 'Driver :url url)))
 
 ; *** Controllers ***
-;(defun fine-tune (&key value target rate tolerance max-rate dec-btn inc-btn) 
-;  (let ((max-rate (if (< (abs value) 1 ) .2 max-rate)))
-;      (cond ((and (>= rate (- max-rate)) (<= value (- tolerance)) (click inc-btn)))
-;            ((and (<= rate max-rate) (>= value tolerance)) (click dec-btn))
-;            ((and (\= rate 0) (> value (- tolerance) (< value tolerance)))
-;                  (if (> rate 0)
-;                    (call-n-times (lambda () (click inc-btn)) (floor (* rate 10)))
-;                    (call-n-times (lambda () (click dec-btn)) (floor (* (- rate) 10)))))
-;            (t (princ "nothinggggggggggggggg"))
-;            ))
-;      ;(progn 
-;      ;  (princ "resetting")
-;      ;  (if (> rate 0)
-;      ;    (call-n-times (lambda () (click inc-btn)) (round (* (- rate max-rate) 10)))
-;      ;    (call-n-times (lambda () (click dec-btn)) (round (* (- (abs rate) max-rate) 10))))
-;      ;  ))
-;)
-
-(defun get-target (target max-rate)
+(defun bound-target (target max-rate)
   (cond ((and (< target 0) (< target (- max-rate)))
          (- max-rate))
         ((and (> target 0) (> target max-rate))
          max-rate)
         (t target)))
 
-(defun to-rate (&key current target max-rate dec-btn inc-btn)
-  (let ((target (get-target target max-rate)))
-    (if (> current target)
-      (progn
-        (terpri)
-        (princ "Dec")
-        (terpri)
-        (princ (round (* (- current target) 10)))
-        (call-n-times (lambda() (click dec-btn)) (round (* (- current target) 10)))
-        )
-      (progn
-        (terpri)
-        (princ "Inc")
-        (terpri)
-        (princ (round (* (- target current) 10)))
-        (call-n-times (lambda() (click inc-btn)) (round (* (- target current) 10)))
-        )
-      )))
-
-(defun fine-tune (&key value target rate tolerance max-rate dec-btn inc-btn) 
-    (to-rate :current rate :target value :max-rate max-rate :dec-btn dec-btn :inc-btn inc-btn)
-)
+(defun fine-tune (&key value rate max-rate dec-btn inc-btn jump)
+ (let ((target (bound-target value max-rate)))
+  (if (> rate target)
+   (call-n-times (lambda() (click dec-btn)) (round (* (- rate target) (/ 1 jump))))
+   (call-n-times (lambda() (click inc-btn)) (round (* (- target rate) (/ 1 jump))))
+  )))
 
 ; *** Main ***
 (defun init-sim() 
@@ -384,11 +350,9 @@
       (print-status)
       
       (sleep .1)
-      (fine-tune :value roll :target 0 :rate roll-rate :max-rate .4 :tolerance .2 :dec-btn roll-left-button :inc-btn roll-right-button)
-      (fine-tune :value pitch :target 0 :rate pitch-rate :max-rate .4 :tolerance .1 :dec-btn pitch-up-button :inc-btn pitch-down-button)
-      (fine-tune :value yaw :target 0 :rate yaw-rate :max-rate .4 :tolerance .1 :dec-btn yaw-left-button :inc-btn yaw-right-button)
-      ;(fine-tune :value y :target 0 :rate rate :max-rate .01 :tolerance .1 :dec-btn translate-right-button :inc-btn translate-left-button)
-      ;(fine-tune :value z :target 0 :rate rate :max-rate .1 :tolerance .1 :dec-btn translate-up-button :inc-btn translate-down-button)
+      (fine-tune :value roll :rate roll-rate :max-rate .4 :dec-btn roll-left-button :inc-btn roll-right-button :jump .1)
+      (fine-tune :value pitch :rate pitch-rate :max-rate .4 :dec-btn pitch-up-button :inc-btn pitch-down-button :jump .1)
+      (fine-tune :value yaw :rate yaw-rate :max-rate .4 :dec-btn yaw-left-button :inc-btn yaw-right-button :jump .1)
       (autopilot
         yaw-left-button 
         yaw-right-button 
