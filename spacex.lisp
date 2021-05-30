@@ -36,6 +36,11 @@
 (defvar reading-translate-range nil)
 (defvar prev-roll 0)
 
+(defvar last-time (/ (get-internal-real-time) internal-time-units-per-second))
+(defvar lastx 0)
+(defvar lasty 0)
+(defvar lastz 0)
+
 
 
 ; *** Utils ***
@@ -185,12 +190,21 @@
          max-rate)
         (t target)))
 
-(defun fine-tune (&key value rate max-rate dec-btn inc-btn jump)
+(defun auto-rotate (&key value rate max-rate dec-btn inc-btn jump)
   (let ((target (bound-target value max-rate)))
     (if (> rate target)
       (call-n-times (lambda() (click dec-btn)) (round (* (- rate target) (/ 1 jump))))
       (call-n-times (lambda() (click inc-btn)) (round (* (- target rate) (/ 1 jump))))
       )))
+
+(defun auto-translate (&key value rate max-rate dec-btn inc-btn)
+  (let ((max-rate (if (< (abs value) 1) (* max-rate (/ 2 value)) max-rate)))
+    (if (> value 0)
+      (if (> rate (- max-rate))
+          (click dec-btn))
+      (if (<= rate max-rate)
+          (click inc-btn))
+          )))
 
 ; *** Main ***
 (defun init-sim() 
@@ -283,28 +297,30 @@
      (y (text-to-value (text reading-translate-y)))
      (z (text-to-value (text reading-translate-z)))
      (rate (text-to-value (text reading-translate-rate)))
+     (dt (- (/ (get-internal-real-time) internal-time-units-per-second) last-time))
      )
     (progn
       (princ "------------------------")
       (terpri)
       (format t "Time: ~s" (current-date-string))
       (terpri)
-      (format t "Roll: ~d, rate: ~d" roll roll-rate)
+      (format t "Roll: ~f, rate: ~f" roll roll-rate)
       (terpri)
-      (format t "Pitch ~d, rate: ~d" pitch pitch-rate)
+      (format t "Pitch ~f, rate: ~f" pitch pitch-rate)
       (terpri)
-      (format t "Yaw ~d, rate: ~d" yaw yaw-rate)
+      (format t "Yaw ~f, rate: ~f" yaw yaw-rate)
       (terpri)
-      (format t "x: ~d" x)
+      (format t "x: ~f, rate: ~f" x (/ (- x lastx) dt))
       (terpri)
-      (format t "y: ~d" y)
+      (format t "y: ~f, rate: ~f" y (/ (- y lasty) dt))
       (terpri)
-      (format t "z: ~d" z)
+      (format t "z: ~f, rate: ~f" z (/ (- z lastz) dt))
       (terpri)
-      (format t "rate: ~d" rate)
+      (format t "rate: ~f" rate)
       (terpri)
       )
     ))
+
 
 (defun autopilot
   (
@@ -345,14 +361,23 @@
         (y (text-to-value (text reading-translate-y-div)))
         (z (text-to-value (text reading-translate-z-div)))
         (rate (text-to-value (text reading-translate-rate-div)))
+        (dt (- (/ (get-internal-real-time) internal-time-units-per-second) last-time))
         )
     (progn
       (print-status)
+      (auto-rotate :value roll :rate roll-rate :max-rate .4 :dec-btn roll-left-button :inc-btn roll-right-button :jump .1)
+      (auto-rotate :value pitch :rate pitch-rate :max-rate .4 :dec-btn pitch-up-button :inc-btn pitch-down-button :jump .1)
+      (auto-rotate :value yaw :rate yaw-rate :max-rate .4 :dec-btn yaw-left-button :inc-btn yaw-right-button :jump .1)
+      (auto-translate :value y :rate (/ (- y lasty) dt) :max-rate .2 :dec-btn translate-left-button :inc-btn translate-right-button)
+      (auto-translate :value z :rate (/ (- z lastz) dt ):max-rate .2 :dec-btn translate-down-button :inc-btn translate-up-button)
 
+      (setq lastx x)
+      (setq lasty y)
+      (setq lastz z)
+      (setq last-time (/ (get-internal-real-time) internal-time-units-per-second))
       (sleep .1)
-      (fine-tune :value roll :rate roll-rate :max-rate .4 :dec-btn roll-left-button :inc-btn roll-right-button :jump .1)
-      (fine-tune :value pitch :rate pitch-rate :max-rate .4 :dec-btn pitch-up-button :inc-btn pitch-down-button :jump .1)
-      (fine-tune :value yaw :rate yaw-rate :max-rate .4 :dec-btn yaw-left-button :inc-btn yaw-right-button :jump .1)
+
+      
       (autopilot
         yaw-left-button 
         yaw-right-button 
@@ -420,9 +445,6 @@
     (ap)
     ))
 ;(main)
-
-
-;(call-n-times (lambda () (click yaw-left-button)) 3)
 
 
 
