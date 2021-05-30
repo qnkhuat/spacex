@@ -3,37 +3,38 @@
 
 ; *** Global variables ***
 ; Easier for testing
-(defparameter driver nil)
+(defvar driver nil)
 
 ; Rotation controls
-(defparameter yaw-left-button nil)
-(defparameter yaw-right-button nil)
-(defparameter pitch-up-button nil)
-(defparameter pitch-down-button nil)
-(defparameter roll-left-button nil)
-(defparameter roll-right-button nil)
+(defvar yaw-left-button nil)
+(defvar yaw-right-button nil)
+(defvar pitch-up-button nil)
+(defvar pitch-down-button nil)
+(defvar roll-left-button nil)
+(defvar roll-right-button nil)
 
 ; transation controls
-(defparameter translate-left-button nil)
-(defparameter translate-right-button nil)
-(defparameter translate-up-button nil)
-(defparameter translate-down-button nil)
-(defparameter translate-forward-button nil)
-(defparameter translate-backward-button nil)
+(defvar translate-left-button nil)
+(defvar translate-right-button nil)
+(defvar translate-up-button nil)
+(defvar translate-down-button nil)
+(defvar translate-forward-button nil)
+(defvar translate-backward-button nil)
 
 ; readings
-(defparameter reading-roll nil)
-(defparameter reading-roll-rate nil)
-(defparameter reading-pitch nil)
-(defparameter reading-pitch-rate nil)
-(defparameter reading-yaw nil)
-(defparameter reading-yaw-rate nil)
+(defvar reading-roll nil)
+(defvar reading-roll-rate nil)
+(defvar reading-pitch nil)
+(defvar reading-pitch-rate nil)
+(defvar reading-yaw nil)
+(defvar reading-yaw-rate nil)
 
-(defparameter reading-translate-x nil)
-(defparameter reading-translate-y nil)
-(defparameter reading-translate-z nil)
-(defparameter reading-translate-rate nil)
-(defparameter reading-translate-range nil)
+(defvar reading-translate-x nil)
+(defvar reading-translate-y nil)
+(defvar reading-translate-z nil)
+(defvar reading-translate-rate nil)
+(defvar reading-translate-range nil)
+(defvar prev-roll 0)
 
 
 
@@ -41,6 +42,15 @@
 (defvar f "spacex.lisp")
 (defvar spacex-sim-url "https://iss-sim.spacex.com/")
 (defun l (name) (load name))
+
+(defun string-sub-any (string list)
+  "subsitute any char in list from string"
+  (if (= (length list) 0)
+    string
+    (string-sub-any (remove (char list 0) string) (subseq list 1))))
+
+(defun text-to-value (text)
+  (with-input-from-string (s (string-sub-any text "°/sm "))  (read s)))
 
 (defun string-replace (string part replacement &key (test #'char=))
   "Returns a new string in which all the occurences of the part 
@@ -58,12 +68,27 @@
             when pos do (write-string replacement out)
             while pos))))
 
-(defun format-url (&rest list) (format nil "~{~A~^/~}" list))
-
 (defun string-to-cl (s)
   "Convert a JSON string to Lisp object"
   (with-input-from-string (sc s)
     (json:decode-json sc)))
+
+(defun format-url (&rest list) (format nil "~{~A~^/~}" list))
+
+(defun current-date-string ()
+  "Returns current date as a string."
+  (multiple-value-bind (sec min hr day mon yr dow dst-p tz)
+                       (get-decoded-time)
+    (declare (ignore sec min hr dow dst-p tz))(format nil "~d:~d:~d" hr min sec))
+)
+
+(defun call-n-times (func n)
+  (if (< n 1)
+    'done
+    (progn
+      (funcall func)
+      (call-n-times func (- n 1)))))
+
 
 ; *** Payload Template ***
 (defvar payload-init-session "{\"capabilities\":{\"firstMatch\":[{}],\"alwaysMatch\":{\"browserName\":\"chrome\",\"platformName\":\"any\",\"goog:chromeOptions\":{\"extensions\":[],\"args\":[]}}}}")
@@ -71,6 +96,7 @@
 (defvar payload-find-elem-by-selector "{\"using\":\"css selector\",\"value\":\"SELECTOR\"}")
 (defvar payload-click "{\"id\":\"ID\"}")
 
+  
 ; *** Classes *** 
 ; Driver to control Chrome WebDriver
 (defclass Driver ()
@@ -86,8 +112,8 @@
 
 (defmethod init-session ((obj Driver))
   (let ((resp (dex:post
-                 (format-url (url obj) "session")
-                 :content payload-init-session)))
+                (format-url (url obj) "session")
+                :content payload-init-session)))
     (setf (session-id obj) (cdr (car (cdr (cdr (car (string-to-cl resp)))))))))
 
 (defmethod goto ((obj Driver) &key dest)
@@ -99,8 +125,8 @@
 (defmethod find-elem-by-selector ((obj Driver) &key selector)
   "Select and Create an elem by css selector"
   (let ((resp (dex:post
-              (format-url (url obj) "session" (session-id obj) "element")
-              :content (string-replace payload-find-elem-by-selector "SELECTOR" selector))))
+                (format-url (url obj) "session" (session-id obj) "element")
+                :content (string-replace payload-find-elem-by-selector "SELECTOR" selector))))
     (make-instance 'Elem 
                    :selector selector
                    :session-url (format-url (url driver) "session" (session-id driver))
@@ -123,7 +149,7 @@
   ((session-url
      :initarg :session-url
      :reader session-url)
-  (selector
+   (selector
      :initarg :selector
      :reader selector)
    (dom-id
@@ -151,6 +177,54 @@
   (let ((url (concatenate 'string host ":" port)))
     (make-instance 'Driver :url url)))
 
+; *** Controllers ***
+;(defun fine-tune (&key value target rate tolerance max-rate dec-btn inc-btn) 
+;  (let ((max-rate (if (< (abs value) 1 ) .2 max-rate)))
+;      (cond ((and (>= rate (- max-rate)) (<= value (- tolerance)) (click inc-btn)))
+;            ((and (<= rate max-rate) (>= value tolerance)) (click dec-btn))
+;            ((and (\= rate 0) (> value (- tolerance) (< value tolerance)))
+;                  (if (> rate 0)
+;                    (call-n-times (lambda () (click inc-btn)) (floor (* rate 10)))
+;                    (call-n-times (lambda () (click dec-btn)) (floor (* (- rate) 10)))))
+;            (t (princ "nothinggggggggggggggg"))
+;            ))
+;      ;(progn 
+;      ;  (princ "resetting")
+;      ;  (if (> rate 0)
+;      ;    (call-n-times (lambda () (click inc-btn)) (round (* (- rate max-rate) 10)))
+;      ;    (call-n-times (lambda () (click dec-btn)) (round (* (- (abs rate) max-rate) 10))))
+;      ;  ))
+;)
+
+(defun get-target (target max-rate)
+  (cond ((and (< target 0) (< target (- max-rate)))
+         (- max-rate))
+        ((and (> target 0) (> target max-rate))
+         max-rate)
+        (t target)))
+
+(defun to-rate (&key current target max-rate dec-btn inc-btn)
+  (let ((target (get-target target max-rate)))
+    (if (> current target)
+      (progn
+        (terpri)
+        (princ "Dec")
+        (terpri)
+        (princ (round (* (- current target) 10)))
+        (call-n-times (lambda() (click dec-btn)) (round (* (- current target) 10)))
+        )
+      (progn
+        (terpri)
+        (princ "Inc")
+        (terpri)
+        (princ (round (* (- target current) 10)))
+        (call-n-times (lambda() (click inc-btn)) (round (* (- target current) 10)))
+        )
+      )))
+
+(defun fine-tune (&key value target rate tolerance max-rate dec-btn inc-btn) 
+    (to-rate :current rate :target value :max-rate max-rate :dec-btn dec-btn :inc-btn inc-btn)
+)
 
 ; *** Main ***
 (defun init-sim() 
@@ -163,9 +237,6 @@
         (click (find-elem-by-selector driver :selector "#begin-button")))
       d)))
 
-
-(defun begin (driver)
-  (princ (session-id driver)))
 
 (defun init-controllers (driver) 
   (let (
@@ -226,21 +297,168 @@
       (setq reading-translate-z reading-translate-z-div)
       (setq reading-translate-rate reading-translate-rate-div)
       (setq reading-translate-range reading-translate-range-div)
-
+      (if (null reading-translate-range)
+        (init-controllers driver)
+        'done
+        )
       )))
+
+
+(defun print-status()
+  (let
+    (
+     (roll (text-to-value (text reading-roll)))
+     (roll-rate (text-to-value (text reading-roll-rate)))
+     (pitch (text-to-value (text reading-pitch)))
+     (pitch-rate (text-to-value (text reading-pitch-rate)))
+     (yaw (text-to-value (text reading-yaw)))
+     (yaw-rate (text-to-value (text reading-yaw-rate)))
+     (x (text-to-value (text reading-translate-x)))
+     (y (text-to-value (text reading-translate-y)))
+     (z (text-to-value (text reading-translate-z)))
+     (rate (text-to-value (text reading-translate-rate)))
+     )
+    (progn
+      (princ "------------------------")
+      (terpri)
+      (format t "Time: ~s" (current-date-string))
+      (terpri)
+      (format t "Roll: ~d, rate: ~d" roll roll-rate)
+      (terpri)
+      (format t "Pitch ~d, rate: ~d" pitch pitch-rate)
+      (terpri)
+      (format t "Yaw ~d, rate: ~d" yaw yaw-rate)
+      (terpri)
+      (format t "x: ~d" x)
+      (terpri)
+      (format t "y: ~d" y)
+      (terpri)
+      (format t "z: ~d" z)
+      (terpri)
+      (format t "rate: ~d" rate)
+      (terpri)
+      )
+    ))
+
+(defun autopilot
+  (
+   yaw-left-button 
+   yaw-right-button 
+   pitch-up-button 
+   pitch-down-button 
+   roll-left-button 
+   roll-right-button 
+
+   translate-left-button 
+   translate-right-button 
+   translate-up-button 
+   translate-down-button 
+   translate-forward-button 
+   translate-backward-button 
+
+   reading-roll-div
+   reading-roll-rate-div
+   reading-pitch-div
+   reading-pitch-rate-div
+   reading-yaw-div
+   reading-yaw-rate-div
+   reading-translate-x-div
+   reading-translate-y-div
+   reading-translate-z-div
+   reading-translate-rate-div
+   )
+
+  (let (
+        (roll (text-to-value (text reading-roll-div)))
+        (roll-rate (text-to-value (text reading-roll-rate-div)))
+        (pitch (text-to-value (text reading-pitch-div)))
+        (pitch-rate (text-to-value (text reading-pitch-rate-div)))
+        (yaw (text-to-value (text reading-yaw-div)))
+        (yaw-rate (text-to-value (text reading-yaw-rate-div)))
+        (x (text-to-value (text reading-translate-x-div)))
+        (y (text-to-value (text reading-translate-y-div)))
+        (z (text-to-value (text reading-translate-z-div)))
+        (rate (text-to-value (text reading-translate-rate-div)))
+        )
+    (progn
+      (print-status)
+      
+      (sleep .1)
+      (fine-tune :value roll :target 0 :rate roll-rate :max-rate .4 :tolerance .2 :dec-btn roll-left-button :inc-btn roll-right-button)
+      (fine-tune :value pitch :target 0 :rate pitch-rate :max-rate .4 :tolerance .1 :dec-btn pitch-up-button :inc-btn pitch-down-button)
+      (fine-tune :value yaw :target 0 :rate yaw-rate :max-rate .4 :tolerance .1 :dec-btn yaw-left-button :inc-btn yaw-right-button)
+      ;(fine-tune :value y :target 0 :rate rate :max-rate .01 :tolerance .1 :dec-btn translate-right-button :inc-btn translate-left-button)
+      ;(fine-tune :value z :target 0 :rate rate :max-rate .1 :tolerance .1 :dec-btn translate-up-button :inc-btn translate-down-button)
+      (autopilot
+        yaw-left-button 
+        yaw-right-button 
+        pitch-up-button 
+        pitch-down-button 
+        roll-left-button 
+        roll-right-button 
+
+        translate-left-button 
+        translate-right-button 
+        translate-up-button 
+        translate-down-button 
+        translate-forward-button 
+        translate-backward-button 
+
+        reading-roll
+        reading-roll-rate
+        reading-pitch
+        reading-pitch-rate
+        reading-yaw
+        reading-yaw-rate
+
+        reading-translate-x
+        reading-translate-y
+        reading-translate-z
+        reading-translate-rate
+        )
+      )))
+
+(defun ap ()
+  (autopilot
+
+    yaw-left-button 
+    yaw-right-button 
+    pitch-up-button 
+    pitch-down-button 
+    roll-left-button 
+    roll-right-button 
+
+    translate-left-button 
+    translate-right-button 
+    translate-up-button 
+    translate-down-button 
+    translate-forward-button 
+    translate-backward-button 
+
+    reading-roll
+    reading-roll-rate
+    reading-pitch
+    reading-pitch-rate
+    reading-yaw
+    reading-yaw-rate
+
+    reading-translate-x
+    reading-translate-y
+    reading-translate-z
+    reading-translate-rate
+    )
+  )
 
 (defun main ()
   (let ((sim (init-sim)))
-    (sleep 5) ; Wait for begin annimation
+    (sleep 10) ; Wait for begin annimation
     (init-controllers sim)
+    (ap)
     ))
 ;(main)
 
 
-
-
-
-
+;(call-n-times (lambda () (click yaw-left-button)) 3)
 
 
 
