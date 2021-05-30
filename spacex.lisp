@@ -42,7 +42,6 @@
 (defvar lastz 0)
 
 
-
 ; *** Utils ***
 (defvar f "spacex.lisp")
 (defvar spacex-sim-url "https://iss-sim.spacex.com/")
@@ -191,7 +190,7 @@
         (t target)))
 
 (defun auto-rotate (&key value rate max-rate dec-btn inc-btn jump)
-  (let ((target (bound-target value max-rate)))
+  (let ((target (bound-target (/ value 2) max-rate)))
     (if (> rate target)
       (call-n-times (lambda() (click dec-btn)) (round (* (- rate target) (/ 1 jump))))
       (call-n-times (lambda() (click inc-btn)) (round (* (- target rate) (/ 1 jump))))
@@ -370,12 +369,13 @@
       (auto-rotate :value yaw :rate yaw-rate :max-rate .4 :dec-btn yaw-left-button :inc-btn yaw-right-button :jump .1)
       (auto-translate :value y :rate (/ (- y lasty) dt) :max-rate .2 :dec-btn translate-left-button :inc-btn translate-right-button)
       (auto-translate :value z :rate (/ (- z lastz) dt ):max-rate .2 :dec-btn translate-down-button :inc-btn translate-up-button)
+      (auto-translate :value x :rate (/ (- x lastx) dt ):max-rate (if (< x 20) .1 1) :dec-btn translate-forward-button :inc-btn translate-backward-button)
 
       (setq lastx x)
       (setq lasty y)
       (setq lastz z)
       (setq last-time (/ (get-internal-real-time) internal-time-units-per-second))
-      (sleep .1)
+      (sleep .5)
 
       
       (autopilot

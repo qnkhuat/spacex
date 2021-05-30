@@ -3,6 +3,7 @@
 /repos
 *swo
 *swp
+chromedriver
 
 # Lisp
 *.FASL
