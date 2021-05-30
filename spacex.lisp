@@ -41,7 +41,6 @@
 (defvar lasty 0)
 (defvar lastz 0)
 
-
 ; *** Utils ***
 (defvar f "spacex.lisp")
 (defvar spacex-sim-url "https://iss-sim.spacex.com/")
@@ -83,7 +82,7 @@
   "Returns current date as a string."
   (multiple-value-bind (sec min hr day mon yr dow dst-p tz)
     (get-decoded-time)
-    (declare (ignore sec min hr dow dst-p tz))(format nil "~d:~d:~d" hr min sec))
+    (declare (ignore day mon yr dow dst-p tz)) (format nil "~d:~d:~d" hr min sec))
   )
 
 (defun call-n-times (func n)
@@ -183,6 +182,7 @@
 
 ; *** Controllers ***
 (defun bound-target (target max-rate)
+  "Bound target based on max-rate. Max-rate is a positive number"
   (cond ((and (< target 0) (< target (- max-rate)))
          (- max-rate))
         ((and (> target 0) (> target max-rate))
@@ -190,20 +190,20 @@
         (t target)))
 
 (defun auto-rotate (&key value rate max-rate dec-btn inc-btn jump)
-  (let ((target (bound-target (/ value 2) max-rate)))
-    (if (> rate target)
-      (call-n-times (lambda() (click dec-btn)) (round (* (- rate target) (/ 1 jump))))
-      (call-n-times (lambda() (click inc-btn)) (round (* (- target rate) (/ 1 jump))))
+  (let ((target-rate (bound-target (/ value 2) max-rate)))
+    (if (> rate target-rate)
+      (call-n-times (lambda() (click dec-btn)) (round (* (- rate target-rate) (/ 1 jump))))
+      (call-n-times (lambda() (click inc-btn)) (round (* (- target-rate rate) (/ 1 jump))))
       )))
 
 (defun auto-translate (&key value rate max-rate dec-btn inc-btn)
-  (let ((max-rate (if (< (abs value) 1) (* max-rate (/ 2 value)) max-rate)))
+  (let ((target (bound-target (/ value 2) max-rate)))
     (if (> value 0)
-      (if (> rate (- max-rate))
-          (click dec-btn))
-      (if (<= rate max-rate)
-          (click inc-btn))
-          )))
+      (if (> rate (- target))
+        (click dec-btn))
+      (if (<= rate target)
+        (click inc-btn))
+      )))
 
 ; *** Main ***
 (defun init-sim() 
@@ -359,7 +359,7 @@
         (x (text-to-value (text reading-translate-x-div)))
         (y (text-to-value (text reading-translate-y-div)))
         (z (text-to-value (text reading-translate-z-div)))
-        (rate (text-to-value (text reading-translate-rate-div)))
+        ;(rate (text-to-value (text reading-translate-rate-div)))
         (dt (- (/ (get-internal-real-time) internal-time-units-per-second) last-time))
         )
     (progn
@@ -367,17 +367,21 @@
       (auto-rotate :value roll :rate roll-rate :max-rate .4 :dec-btn roll-left-button :inc-btn roll-right-button :jump .1)
       (auto-rotate :value pitch :rate pitch-rate :max-rate .4 :dec-btn pitch-up-button :inc-btn pitch-down-button :jump .1)
       (auto-rotate :value yaw :rate yaw-rate :max-rate .4 :dec-btn yaw-left-button :inc-btn yaw-right-button :jump .1)
-      (auto-translate :value y :rate (/ (- y lasty) dt) :max-rate .2 :dec-btn translate-left-button :inc-btn translate-right-button)
-      (auto-translate :value z :rate (/ (- z lastz) dt ):max-rate .2 :dec-btn translate-down-button :inc-btn translate-up-button)
-      (auto-translate :value x :rate (/ (- x lastx) dt ):max-rate (if (< x 20) .1 1) :dec-btn translate-forward-button :inc-btn translate-backward-button)
+      ;(auto-translate :value x :rate (/ (- x lastx) dt) :max-rate (if (< x 20) .1  1) :dec-btn translate-forward-button :inc-btn translate-backward-button)
+      ;(auto-translate :value y :rate (/ (- y lasty) dt) :max-rate (if (< y 10) .1 .5) :dec-btn translate-left-button :inc-btn translate-right-button)
+      ;(auto-translate :value z :rate (/ (- z lastz) dt) :max-rate (if (< z 10) .1 .5) :dec-btn translate-down-button :inc-btn translate-up-button)
+
+      (auto-translate :value x :rate (/ (- x lastx) dt) :max-rate (if (< x 20) .1  .2) :dec-btn translate-forward-button :inc-btn translate-backward-button)
+      (auto-translate :value y :rate (/ (- y lasty) dt) :max-rate (if (< y 10) .1 .2) :dec-btn translate-left-button :inc-btn translate-right-button)
+      (auto-translate :value z :rate (/ (- z lastz) dt) :max-rate (if (< z 10) .1 .2) :dec-btn translate-down-button :inc-btn translate-up-button)
+
 
       (setq lastx x)
       (setq lasty y)
       (setq lastz z)
       (setq last-time (/ (get-internal-real-time) internal-time-units-per-second))
-      (sleep .5)
+      (sleep .4)
 
-      
       (autopilot
         yaw-left-button 
         yaw-right-button 
@@ -445,20 +449,6 @@
     (ap)
     ))
 ;(main)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
