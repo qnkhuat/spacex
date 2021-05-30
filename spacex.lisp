@@ -78,9 +78,9 @@
 (defun current-date-string ()
   "Returns current date as a string."
   (multiple-value-bind (sec min hr day mon yr dow dst-p tz)
-                       (get-decoded-time)
+    (get-decoded-time)
     (declare (ignore sec min hr dow dst-p tz))(format nil "~d:~d:~d" hr min sec))
-)
+  )
 
 (defun call-n-times (func n)
   (if (< n 1)
@@ -96,7 +96,7 @@
 (defvar payload-find-elem-by-selector "{\"using\":\"css selector\",\"value\":\"SELECTOR\"}")
 (defvar payload-click "{\"id\":\"ID\"}")
 
-  
+
 ; *** Classes *** 
 ; Driver to control Chrome WebDriver
 (defclass Driver ()
@@ -186,11 +186,11 @@
         (t target)))
 
 (defun fine-tune (&key value rate max-rate dec-btn inc-btn jump)
- (let ((target (bound-target value max-rate)))
-  (if (> rate target)
-   (call-n-times (lambda() (click dec-btn)) (round (* (- rate target) (/ 1 jump))))
-   (call-n-times (lambda() (click inc-btn)) (round (* (- target rate) (/ 1 jump))))
-  )))
+  (let ((target (bound-target value max-rate)))
+    (if (> rate target)
+      (call-n-times (lambda() (click dec-btn)) (round (* (- rate target) (/ 1 jump))))
+      (call-n-times (lambda() (click inc-btn)) (round (* (- target rate) (/ 1 jump))))
+      )))
 
 ; *** Main ***
 (defun init-sim() 
@@ -348,7 +348,7 @@
         )
     (progn
       (print-status)
-      
+
       (sleep .1)
       (fine-tune :value roll :rate roll-rate :max-rate .4 :dec-btn roll-left-button :inc-btn roll-right-button :jump .1)
       (fine-tune :value pitch :rate pitch-rate :max-rate .4 :dec-btn pitch-up-button :inc-btn pitch-down-button :jump .1)
