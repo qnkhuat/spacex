@@ -1,6 +1,9 @@
 (ql:quickload "dexador")
 (ql:quickload "cl-json")
 
+; *** CONFIG ***
+(defvar PORT "9515")
+
 ; *** Global variables ***
 ; Easier for testing
 (defvar driver nil)
@@ -143,7 +146,7 @@
       obj
       (format stream "~a, SessionId: ~a" driver-url driver-session-id))))
 
-(defun make-driver (&key (host "http://127.0.0.1") (port "9515"))
+(defun make-driver (&key (host "http://127.0.0.1") (port PORT))
   (let ((url (concatenate 'string host ":" port)))
     (make-instance 'Driver :url url)))
 
@@ -444,7 +447,7 @@
     (init-controllers sim)
     (ap)
     ))
-;(main)
+(main)
 
 
 
