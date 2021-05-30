@@ -12,3 +12,6 @@ Notes about this version:
 - Install sbcl
 - Download ChromeDriver and run it on port 9515
 - Run command: `sbcl --load spacex.lisp` to start the program
+
+
+[![Video Sample](https://img.youtube.com/vi/7i4xp-mwQZY/0.jpg)](https://www.youtube.com/watch?v=7i4xp-mwQZY)
