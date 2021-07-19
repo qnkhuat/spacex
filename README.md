@@ -9,7 +9,7 @@ Notes about this version:
 - Control algorithm: purely proportional with some tweaks. Will try PID later
 
 # To run
-- Install sbcl
+- Install sbcl: [link](http://www.sbcl.org/platform-table.html)
 - Download ChromeDriver and run it on port 9515
 - Run command: `sbcl --load spacex.lisp` to start the program
 
